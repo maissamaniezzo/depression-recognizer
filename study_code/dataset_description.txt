@@ -1,0 +1,43 @@
+git clone https://github.com/OpenNeuroDatasets/ds002748.git
+
+72 subjects
+
+Each subject has a nii.gz for
+- anatomical
+- functional
+
+Anatomical: T1w -> 3D
+- 3D volume
+- Lots of slices
+
+Functional: fMRI -> 4D, TR = 2.5 s
+- 100x 3D volume
+- Each 3D volume with 25x 2D slices
+- Since each volume is 2.5s long, the whole fMRI is 4min10s
+
+====================================================================================================
+
+MRI 4D é o dado bruto: um “vídeo 3D” do cérebro (dimensão X×Y×Z×T).
+- X,Y,Z = espaço (volume 3D feito de slices)
+- T = tempo (100 volumes no seu caso; 1 volume a cada TR=2,5s)
+
+ALFF, fALFF, ReHo são índices derivados que você calcula a partir desse fMRI 4D. Cada índice vira um
+mapa 3D por sujeito (dimensão X×Y×Z):
+- ALFF: “quanta” oscilação lenta (0,01–0,1 Hz) cada voxel tem ao longo do tempo.
+- fALFF: ALFF normalizado pela energia total do sinal (torna comparável entre sujeitos).
+- ReHo: quão sincronizada a série temporal de um voxel está com as dos vizinhos (Kendall’s W).
+
+
+Como isso vira “imagem” para a rede
+Você parte do fMRI 4D (X×Y×Z×T).
+Calcula um mapa 3D por índice (ALFF / fALFF / ReHo ⇒ X×Y×Z).
+Para alimentar uma CNN 2D (ResNet), pega uma fatia (ou mosaico) desses mapas:
+ex.: usar a fatia axial central de cada mapa → três matrizes 2D.
+
+(Opcional) Empilha os três mapas como canais: [ALFF, fALFF, ReHo] ⇒ parece um “RGB” (3 canais) e 
+entra direto no modelo.
+
+Intuição: o fMRI é o vídeo; ALFF/fALFF/ReHo são resumos voxel-a-voxel do comportamento temporal 
+desse vídeo. Depois você transforma esses resumos em imagens 2D para a rede.
+
+====================================================================================================

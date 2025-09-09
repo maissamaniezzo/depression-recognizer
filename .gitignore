@@ -1,0 +1,5 @@
+# Environment
+.venv/
+
+# Dataset folder
+ds002748/
