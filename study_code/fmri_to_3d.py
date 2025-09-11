@@ -11,6 +11,13 @@ Usar:
     python fmri_to_3d.py --nii path/in.nii.gz --tr 2.5 --out path/out_3d.nii.gz
     python fmri_to_3d.py --in_dir /dados/fmri --out_dir /dados/indices --tr 2.5
     # salva como <nome>_3d.nii.gz em /dados/indices/<subpastas>
+
+Como foi gerado dataset_3d
+    python depression-recognizer/study_code/fmri_to_3d.py \
+        --in_dir depression-recognizer/ds002748 \
+        --out_dir depression-recognizer/dataset_3d  \
+        --tr 2.5 --neighbor 3   --patch 64 64 64 \
+        --chunk_t 16 --max_split_mb 32 --device cuda --no_inner_tqdm
 """
 
 import argparse
