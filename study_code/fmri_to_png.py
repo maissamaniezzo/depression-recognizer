@@ -1,4 +1,4 @@
-# USE: python fmri_to_png.py --nii sub-01_task-rest_bold.nii.gz --tr 2.5 --out sub-01_indices.png
+# USE: python fmri_to_png.py --nii depression-recognizer/ds002748/sub-01/func/sub-01_task-rest_bold.nii.gz --tr 2.5 --out sub-01_indices.png
 # opções:
 #   --low 0.01 --high 0.10  (faixa ALFF/fALFF)
 #   --neighbor 3            (tamanho do cubo da vizinhança para ReHo; use 3)
@@ -8,6 +8,8 @@ import argparse
 from pathlib import Path
 import numpy as np
 import nibabel as nib
+from itertools import product
+from tqdm import tqdm
 from scipy.signal import detrend
 from scipy.stats import rankdata
 from PIL import Image
@@ -86,17 +88,15 @@ def reho_3d(data4d: np.ndarray, neigh: int = 3) -> np.ndarray:
     D = np.pad(data4d, pad_width, mode='edge')  # (X+2r, Y+2r, Z+2r, T)
     out = np.zeros((X, Y, Z), dtype=np.float32)
 
-    for z in range(X):
-        for y in range(Y):
-            for x in range(Z):
-                # bloco vizinho em D: cuidado com eixos (pad fizemos como (x,y,z,t))
-                xb, yb, zb = z + r, y + r, x + r
-                block = D[xb - r: xb + r + 1,
-                          yb - r: yb + r + 1,
-                          zb - r: zb + r + 1, :]           # (neigh, neigh, neigh, T)
-                k = neigh * neigh * neigh
-                series = block.reshape(k, T)
-                out[z, y, x] = kendalls_w(series)
+    for z, y, x in tqdm(product(range(X), range(Y), range(Z)),
+                    total=X*Y*Z, desc="Varredura 3D"):
+        xb, yb, zb = z + r, y + r, x + r
+        block = D[xb - r: xb + r + 1,
+                yb - r: yb + r + 1,
+                zb - r: zb + r + 1, :]
+        k = neigh * neigh * neigh
+        series = block.reshape(k, T)
+        out[z, y, x] = kendalls_w(series)
     return out
 
 def main():
@@ -112,12 +112,15 @@ def main():
     nii_path = Path(args.nii)
     out_path = Path(args.out)
 
+
     # 1) Leitura NIfTI
     img = nib.load(str(nii_path))
+    print("\nLoad OK")
     data = img.get_fdata()  # (X,Y,Z,T) para fMRI
     if data.ndim != 4:
         raise ValueError(f"Esperava 4D (X,Y,Z,T), mas recebi shape {data.shape}")
     X, Y, Z, T = data.shape
+    print("\nData OK")
 
     # 2) Limpeza mínima (detrend + centragem). Em pipelines completos, adiciona-se regressão de confounds, etc.
     #    Você pode substituir por nilearn.signal.clean para band-pass explícito.
@@ -127,10 +130,14 @@ def main():
     data = detrend(data, axis=3, type='linear')
 
     # 3) ALFF e fALFF (3D cada)
+    print("\nCalling alff_falff_3d")
     ALFF_3d, fALFF_3d = alff_falff_3d(data, TR=args.tr, low=args.low, high=args.high)
+    print("\nalff_falff_3d OK")
 
     # 4) ReHo (3D) — vizinhança 3×3×3 por padrão
+    print("\nCalling reho_3d")
     reho_map = reho_3d(data, neigh=int(args.neighbor))
+    print("\nreho_3d OK")
 
     # 5) Extrair fatia axial central de cada mapa 3D
     zc = Z // 2
@@ -139,15 +146,18 @@ def main():
     reho2d  = reho_map[:, :, zc]
 
     # 6) Padronizar cada 2D (z-score + min-max) e fazer média
+    print("\nCalling z score")
     A = zscore_im2d(alff2d)
     F = zscore_im2d(falff2d)
     R = zscore_im2d(reho2d)
     combo = (A + F + R) / 3.0  # 2D em [0,1]
+    print("\nz score OK")
 
     # 7) Salvar PNG (converte para 8 bits)
+    print("\n...saving")
     im = (np.clip(combo, 0.0, 1.0) * 255).astype(np.uint8)
     Image.fromarray(im, mode="L").save(str(out_path))
-    print(f"OK! PNG salvo em: {out_path.resolve()}")
+    print(f"\nOK! PNG salvo em: {out_path.resolve()}")
 
 if __name__ == "__main__":
     main()
