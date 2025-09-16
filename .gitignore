@@ -1,5 +1,9 @@
 # Environment
 .venv/
 
-# Dataset folder
+# Github folders
 ds002748/
+MedicalNet/
+
+# Model pth
+model/resnet_18_23dataset.pth
