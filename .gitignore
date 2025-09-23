@@ -7,3 +7,4 @@ MedicalNet/
 
 # Model pth
 model/resnet_18_23dataset.pth
+model/checkpoints/med3d_resnet18_from_nifti4d.pt

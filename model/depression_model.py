@@ -1,24 +1,46 @@
-# train_med3d_resnet18_from_nifti4d.py
+# train_med3d_resnet18_from_nifti4d.py — versão revisada
 import os, sys
+import csv
+from pathlib import Path
+from typing import List, Dict
+
 import numpy as np
-import torch.nn as nn
 import nibabel as nib
-import torch, torch.nn as nn
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-from typing import List, Dict
-from pathlib import Path
-import csv
 
-# mapeamento de rótulos do CSV/pastas -> classe
+# ==============================
+# Mapeamento de rótulos (case-insensitive)
+# ==============================
 LABELS_MAP = {
     "control": 0, "controle": 0, "hc": 0, "healthy": 0,
     "depr": 1, "depression": 1, "depressed": 1, "patient": 1, "patients": 1
 }
 
-def _norm_path(p: str) -> Path:
-    p = (p or "").strip()
-    return Path(p.replace("\\", "/"))
+# ----------------------------
+# Utilitários de caminho / extensão
+# ----------------------------
+
+def _norm_path(s: str) -> Path:
+    """Normaliza string de caminho. Retorna Path."""
+    s = (s or "").strip()
+    return Path(s.replace("\\", "/"))
+
+
+def _is_nifti(p: Path) -> bool:
+    """Aceita .nii e .nii.gz"""
+    suf = p.suffix.lower()
+    if suf == ".nii":
+        return True
+    # p.suffixes cobre .nii.gz
+    return p.suffixes[-2:] == [".nii", ".gz"]
+
+
+# ----------------------------
+# Leitura de itens via manifest/pastas
+# ----------------------------
 
 def build_items_from_split(root_dir: str, split: str, manifest_name: str = "manifest.csv"):
     """
@@ -30,45 +52,46 @@ def build_items_from_split(root_dir: str, split: str, manifest_name: str = "mani
     """
     root = Path(root_dir)
     assert root.exists(), f"Pasta não encontrada: {root}"
-    items = []
+    items: List[Dict] = []
 
     manifest = root / manifest_name
     if manifest.exists():
         with manifest.open("r", newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                # print(row.get("split", ""), split)
-                if row.get("split", "") != split:
+                if (row.get("split", "").strip().lower() != split.lower()):
                     continue
-                group = row.get("group", "")
-                label = LABELS_MAP.get(group, None)
-                # print(group, label)
+                group = (row.get("group", "") or "").strip().lower()
+                label = LABELS_MAP.get(group)
                 if label is None:
                     continue
 
-                p = _norm_path(row.get("dest_path"))
-                if not p:
+                p = _norm_path(row.get("dest_path")) or _norm_path(row.get("src_path"))
+                if p is None:
                     continue
+
+                # Quando dest_path começa com 'train-test-validation/...', voltamos um nível para não duplicar
                 path = p if p.is_absolute() else (root.parent / p)
-                # print(path)
-                # aceitar .nii e .nii.gz
-                if path.suffix.lower() == ".gz":
-                    if path.exists():
-                        items.append({"nii": str(path), "label": label})
+
+                if _is_nifti(path) and path.exists():
+                    items.append({"nii": str(path), "label": int(label)})
     else:
         # fallback: glob nas pastas
         for cls in ("control", "depr"):
-            label = LABELS_MAP.get(cls, None)
-            if label is None: 
+            label = LABELS_MAP.get(cls)
+            if label is None:
                 continue
             base = root / split / cls
             for p in list(base.rglob("*.nii.gz")) + list(base.rglob("*.nii")):
-                items.append({"nii": str(p), "label": label})
+                items.append({"nii": str(p), "label": int(label)})
 
     if not items:
-        raise RuntimeError(f"Nenhum NIfTI encontrado em {root} para split='{split}'. "
-                           f"Verifique manifest.csv e/ou estrutura de pastas.")
+        raise RuntimeError(
+            f"Nenhum NIfTI encontrado em {root} para split='{split}'. "
+            f"Verifique manifest.csv e/ou estrutura de pastas."
+        )
     return items
+
 
 # ----------------------------
 # Dataset: NIfTI 4D (X,Y,Z,3) -> tensor [C=3, D, H, W]
@@ -78,12 +101,14 @@ class IndicesNifti4DDataset(Dataset):
     items: lista de dicts {"nii": caminho_para_arquivo_4d, "label": int}
     Cada NIfTI tem shape (X,Y,Z,3) com canais [ALFF, fALFF, ReHo].
     """
+
     def __init__(self, items: List[Dict], target_shape=(64, 96, 96), zscore=True):
         self.items = items
         self.target_shape = tuple(target_shape)  # (D,H,W)
         self.zscore = zscore
 
-    def __len__(self): return len(self.items)
+    def __len__(self):
+        return len(self.items)
 
     def __getitem__(self, i):
         path = self.items[i]["nii"]
@@ -112,11 +137,12 @@ class IndicesNifti4DDataset(Dataset):
         x = t[0]  # [3, D, H, W]
         return x, torch.tensor(y, dtype=torch.long)
 
+
 # ----------------------------
 # Modelo: Med3D-ResNet18 + conv1 (1->3) com pesos replicados/normalizados
 # ----------------------------
 
-def build_med3d_resnet18_3c(num_classes, med3d_weights_path, sample_shape=(64,96,96)):
+def build_med3d_resnet18_3c(num_classes, med3d_weights_path, sample_shape=(64, 96, 96)):
     """
     ResNet-18 3D do MedicalNet (Tencent):
       - instancia com num_seg_classes (API do repo)
@@ -132,7 +158,6 @@ def build_med3d_resnet18_3c(num_classes, med3d_weights_path, sample_shape=(64,96
     D, H, W = sample_shape
 
     # 1) instancia com a assinatura correta
-    #    (o valor de num_seg_classes aqui é irrelevante pois trocaremos o head em seguida)
     model = resnet18(
         sample_input_D=D, sample_input_H=H, sample_input_W=W,
         num_seg_classes=1,                 # <- API do MedicalNet
@@ -162,40 +187,40 @@ def build_med3d_resnet18_3c(num_classes, med3d_weights_path, sample_shape=(64,96
         bias=False,
     )
     with torch.no_grad():
-        new.weight[:, 0, ...] = old.weight[:, 0, ...] / 3.0
-        new.weight[:, 1, ...] = old.weight[:, 0, ...] / 3.0
-        new.weight[:, 2, ...] = old.weight[:, 0, ...] / 3.0
+        for c in range(3):
+            new.weight[:, c, ...] = old.weight[:, 0, ...] / 3.0
     model.conv1 = new
 
-    # 4) troca o "cabeçote de segmentação" por um de classificação
-    #    Saída de layer4 na ResNet-18 (BasicBlock exp=1) tem 512 canais → usa 512 aqui.
+    # 4) head de classificação (substitui 'conv_seg')
     model.conv_seg = nn.Sequential(
         nn.AdaptiveAvgPool3d(1),
         nn.Flatten(),
         nn.Dropout(p=0.2),
-        nn.Linear(512, num_classes)
+        nn.Linear(512, num_classes),
     )
 
     return model
 
+
 # ----------------------------
 # Congelamentos utilitários
 # ----------------------------
+
 def unfreeze_conv1_and_fc(model):
     # agora 'fc' é o 'conv_seg'
     for n, p in model.named_parameters():
         p.requires_grad = n.startswith("conv1") or n.startswith("conv_seg")
 
+
 def unfreeze_fc_only(model):
     for n, p in model.named_parameters():
         p.requires_grad = n.startswith("conv_seg")
 
-    for n, p in model.named_parameters():
-        p.requires_grad = n.startswith("fc")
 
 # ----------------------------
 # Loops de treino/val
 # ----------------------------
+
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
     total, correct, running = 0, 0, 0.0
@@ -211,6 +236,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         total += x.size(0)
     return running / total, correct / total
 
+
 @torch.no_grad()
 def eval_one_epoch(model, loader, criterion, device):
     model.eval()
@@ -224,12 +250,14 @@ def eval_one_epoch(model, loader, criterion, device):
         total += x.size(0)
     return running / total, correct / total
 
+
 # ---------------------------------
 # MAIN ajustada: usa a pasta dataset_3d/train-test-validation
 # ---------------------------------
+
 def main():
     # ====== CONFIG ======
-    num_classes   = 2           # depressão vs controle (ajuste conforme seu caso)
+    num_classes   = 2           # depressão vs controle
     med3d_ckpt    = "/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/model/resnet_18_23dataset.pth"  # pesos Med3D
     target_shape  = (64, 96, 96)  # (D,H,W) após resize
     batch_size    = 2
@@ -240,21 +268,16 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # Sementes (reprodutibilidade simples)
+    torch.manual_seed(1337)
+    np.random.seed(1337)
+
     # ====== RAIZ DO DATASET ======
-    # Estrutura:
-    # dataset_3d/
-    #   train-test-validation/
-    #     train/{control,depr}/*.nii.gz
-    #     validation/{control,depr}/*.nii.gz
-    #     test/{control,depr}/*.nii.gz (opcional)
-    #     manifest.csv
     data_root = "/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation"
 
     # monta a lista a partir do manifest.csv (se existir) ou das pastas
     train_items = build_items_from_split(data_root, split="train",      manifest_name="manifest.csv")
     val_items   = build_items_from_split(data_root, split="validation", manifest_name="manifest.csv")
-    # Se quiser também um conjunto de teste:
-    # test_items  = build_items_from_split(data_root, split="test", manifest_name="manifest.csv")
 
     print(f"[INFO] N train={len(train_items)} | N val={len(val_items)}")
 
@@ -263,15 +286,21 @@ def main():
     val_ds   = IndicesNifti4DDataset(val_items,   target_shape=target_shape, zscore=True)
 
     # Nota: ajuste num_workers conforme seu ambiente/IO
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                          num_workers=2, pin_memory=(device.type == "cuda"), persistent_workers=True)
-    val_dl   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False,
-                          num_workers=2, pin_memory=(device.type == "cuda"), persistent_workers=True)
+    use_cuda = (device.type == "cuda")
+    train_dl = DataLoader(
+        train_ds, batch_size=batch_size, shuffle=True,
+        num_workers=2, pin_memory=use_cuda, persistent_workers=True
+    )
+    val_dl   = DataLoader(
+        val_ds, batch_size=batch_size, shuffle=False,
+        num_workers=2, pin_memory=use_cuda, persistent_workers=True
+    )
 
     # ====== MODELO ======
     model = build_med3d_resnet18_3c(
         num_classes=num_classes,
-        med3d_weights_path=med3d_ckpt
+        med3d_weights_path=med3d_ckpt,
+        sample_shape=target_shape,
     ).to(device)
 
     # ====== WARM-UP: treinar conv1 + fc ======
@@ -279,7 +308,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=lr_warmup
+        lr=lr_warmup,
     )
 
     print("\n== Warm-up (conv1 + fc) ==")
@@ -292,7 +321,7 @@ def main():
     unfreeze_fc_only(model)
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=lr_fc
+        lr=lr_fc,
     )
 
     print("\n== Treino principal (apenas fc) ==")
@@ -301,9 +330,10 @@ def main():
         va_loss, va_acc = eval_one_epoch(model, val_dl, criterion, device)
         print(f"[FC {ep:02d}] train_loss={tr_loss:.4f} acc={tr_acc:.3f} | val_loss={va_loss:.4f} acc={va_acc:.3f}")
 
-    os.makedirs("checkpoints", exist_ok=True)
-    torch.save(model.state_dict(), "checkpoints/med3d_resnet18_from_nifti4d.pt")
-    print("\nModelo salvo em checkpoints/med3d_resnet18_from_nifti4d.pt")
+    os.makedirs("model/checkpoints", exist_ok=True)
+    torch.save(model.state_dict(), "model/checkpoints/med3d_resnet18_from_nifti4d.pt")
+    print("\nModelo salvo em model/checkpoints/med3d_resnet18_from_nifti4d.pt")
+
 
 if __name__ == "__main__":
     main()
