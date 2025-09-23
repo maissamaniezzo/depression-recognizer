@@ -1,0 +1,15 @@
+id,path,label,pred,prob_control,prob_depr
+sub-05,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-05__sub-05_task-rest_bold_3d.nii.gz,1,0,0.614685,0.385314
+sub-06,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-06__sub-06_task-rest_bold_3d.nii.gz,1,1,0.318050,0.681950
+sub-08,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-08__sub-08_task-rest_bold_3d.nii.gz,1,0,0.634323,0.365677
+sub-19,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-19__sub-19_task-rest_bold_3d.nii.gz,1,0,0.566800,0.433200
+sub-23,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-23__sub-23_task-rest_bold_3d.nii.gz,1,1,0.016517,0.983483
+sub-25,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-25__sub-25_task-rest_bold_3d.nii.gz,1,1,0.056553,0.943446
+sub-26,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-26__sub-26_task-rest_bold_3d.nii.gz,1,1,0.001981,0.998019
+sub-32,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-32__sub-32_task-rest_bold_3d.nii.gz,1,1,0.001611,0.998389
+sub-34,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-34__sub-34_task-rest_bold_3d.nii.gz,1,1,0.008780,0.991220
+sub-39,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/depr/sub-39__sub-39_task-rest_bold_3d.nii.gz,1,1,0.092990,0.907010
+sub-56,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/control/sub-56__sub-56_task-rest_bold_3d.nii.gz,0,0,0.553466,0.446534
+sub-57,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/control/sub-57__sub-57_task-rest_bold_3d.nii.gz,0,1,0.459572,0.540428
+sub-66,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/control/sub-66__sub-66_task-rest_bold_3d.nii.gz,0,0,0.615850,0.384150
+sub-71,/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation/validation/control/sub-71__sub-71_task-rest_bold_3d.nii.gz,0,1,0.493240,0.506760

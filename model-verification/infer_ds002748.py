@@ -213,7 +213,7 @@ def main():
     model.to(device)
 
     # ====== Avaliação ======
-    out_dir = Path("results-ds002748"); out_dir.mkdir(exist_ok=True, parents=True)
+    out_dir = Path("model-verification/results-ds002748"); out_dir.mkdir(exist_ok=True, parents=True)
     out_csv = out_dir / f"{split}_predictions.csv"
     metrics = evaluate_split(model, dl, device, out_csv)
 
