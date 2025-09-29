@@ -51,7 +51,9 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF",
 
 def find_niigz_recursive(in_dir: Path) -> List[Path]:
     # sub-*/func/*_bold.nii.gz apenas
-    return sorted([p for p in in_dir.glob("**/func/*_bold.nii.gz")
+    # return sorted([p for p in in_dir.glob("**/func/*_bold.nii.gz")
+    #                if p.is_file() and ".git" not in p.parts])
+    return sorted([p for p in in_dir.glob("**/ses-b0/func/*_run-01_bold.nii.gz")
                    if p.is_file() and ".git" not in p.parts])
 
 

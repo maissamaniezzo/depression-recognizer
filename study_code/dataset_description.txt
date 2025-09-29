@@ -41,3 +41,5 @@ Intuição: o fMRI é o vídeo; ALFF/fALFF/ReHo são resumos voxel-a-voxel do co
 desse vídeo. Depois você transforma esses resumos em imagens 2D para a rede.
 
 ====================================================================================================
+
+git clone https://github.com/OpenNeuroDatasets/ds005917

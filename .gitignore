@@ -3,7 +3,12 @@
 
 # Github folders
 ds002748/
+ds005917/
 MedicalNet/
+
+# Data
+depression-recognizer/dataset_3d/ds002748
+depression-recognizer/dataset_3d/ds005917
 
 # Model pth
 model/resnet_18_23dataset.pth
