@@ -43,3 +43,5 @@ desse vídeo. Depois você transforma esses resumos em imagens 2D para a rede.
 ====================================================================================================
 
 git clone https://github.com/OpenNeuroDatasets/ds005917
+
+https://huggingface.co/TencentMedicalNet/MedicalNet-Resnet18/blob/main/resnet_18_23dataset.pth
