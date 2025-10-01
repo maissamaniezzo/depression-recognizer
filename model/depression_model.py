@@ -263,8 +263,8 @@ def main():
     batch_size    = 2
     lr_warmup     = 1e-4
     lr_fc         = 5e-4
-    warmup_epochs = 15
-    main_epochs   = 50
+    warmup_epochs = 100
+    main_epochs   = 2000
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

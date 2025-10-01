@@ -199,7 +199,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     data_root = "/home/maissa/Documents/UNIFEI/TFG/depression-recognizer/dataset_3d/train-test-validation"
-    model_pt  = "model/checkpoints/med3d_resnet18_from_nifti4d.pt"  # gerado no treino
+    model_pt  = "model/checkpoints/med3d_resnet18_from_joint_data-1.pt"  # gerado no treino
 
     # ====== Dados ======
     items = build_items_from_split(data_root, split=split, manifest_name="manifest.csv")
@@ -213,7 +213,7 @@ def main():
     model.to(device)
 
     # ====== Avaliação ======
-    out_dir = Path("model-verification/results-ds002748"); out_dir.mkdir(exist_ok=True, parents=True)
+    out_dir = Path("model-verification/results-joint_data-1"); out_dir.mkdir(exist_ok=True, parents=True)
     out_csv = out_dir / f"{split}_predictions.csv"
     metrics = evaluate_split(model, dl, device, out_csv)
 
