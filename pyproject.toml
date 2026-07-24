@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "depression-recognizer"
+version = "0.1.0"
+description = "fMRI-based depression recognition using Med3D-ResNet18 on ALFF/fALFF/ReHo indices."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "TFG UNIFEI" },
+]
+keywords = ["fmri", "depression", "medicalnet", "resnet3d", "alff", "falff", "reho"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "nibabel>=5.3",
+    "tqdm>=4.66",
+    "torch>=2.1",
+]
+
+[project.optional-dependencies]
+cpu = ["torch>=2.1"]
+cu121 = ["torch>=2.1", "torchvision>=0.16"]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+data = [
+    "scipy>=1.11",
+    "scikit-learn>=1.3",
+    "Pillow>=10.0",
+    "huggingface_hub>=0.23",
+    "safetensors>=0.4",
+]
+
+[project.scripts]
+dep-recognizer-preprocess = "depression_recognizer.preprocessing.bids_to_3d:main"
+dep-recognizer-split = "depression_recognizer.data.split:main"
+dep-recognizer-train = "depression_recognizer.modeling.train:main"
+dep-recognizer-infer = "depression_recognizer.modeling.infer:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # function calls in defaults (e.g. Path())
+    "RUF012", # mutable class attributes (used in pydantic-style configs)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
