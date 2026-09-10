@@ -1,14 +1,47 @@
-# Environment
+# ----- Python -----
 .venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
-# Github folders
+# ----- Editor / OS -----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ----- Datasets (large) -----
+# OpenNeuro raw datasets (cloned with datalad / git)
 ds002748/
 ds005917/
+ds005817/
+
+# MedicalNet (Tencent) — clone separately
 MedicalNet/
 
-# Data
+# Generated 3D index NIfTI volumes
+data/dataset_3d/
 dataset_3d/
 
-# Model pth
+# HuggingFace / safetensors caches
+hf_cache/
+*.safetensors
+
+# ----- Model artifacts -----
+# Pretrained Med3D weights (downloaded)
 model/resnet_18_23dataset.pth
 model/checkpoints/
+
+# Evaluation / inference results
+model-verification/results/
+results/
+
+# ----- Build artifacts -----
+*.log
+tmp/
